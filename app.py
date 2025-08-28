@@ -11,12 +11,9 @@ def download_ffmpeg():
         return
     url = "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
     tar_path = "/tmp/ffmpeg.tar.xz"
-    # Download ffmpeg archive
     st.info("Downloading ffmpeg binary (~30MB)...")
     subprocess.run(["curl", "-L", url, "-o", tar_path], check=True)
-    # Extract ffmpeg binary
     subprocess.run(["tar", "-xf", tar_path, "-C", "/tmp"], check=True)
-    # Find and move ffmpeg binary to /tmp/ffmpeg
     extracted_dir = None
     for entry in os.listdir("/tmp"):
         if entry.startswith("ffmpeg") and os.path.isdir(os.path.join("/tmp", entry)):
@@ -40,15 +37,32 @@ st.title("▶ YouTube Shorts Downloader (Streamlit Cloud Compatible)")
 
 download_ffmpeg()
 
+uploaded_cookies = st.file_uploader("Upload your YouTube cookies.txt (optional)", type=["txt"])
+
 youtube_url = st.text_input("Enter YouTube Shorts URL:")
 
 if st.button("Download & Process") and youtube_url:
+    cookie_path = None
+    if uploaded_cookies is not None:
+        cookie_path = "/tmp/cookies.txt"
+        with open(cookie_path, "wb") as f:
+            f.write(uploaded_cookies.getbuffer())
+        st.success("Cookies uploaded!")
+
     ydl_opts = {
         'format': 'bestvideo+bestaudio/best',
         'merge_output_format': 'mp4',
         'outtmpl': 'downloaded.%(ext)s',
         'ffmpeg_location': get_ffmpeg_dir(),
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)'
+                          ' Chrome/115.0.0.0 Safari/537.36',
+        },
+        'geo_bypass': True,
     }
+
+    if cookie_path:
+        ydl_opts['cookiefile'] = cookie_path
 
     with st.spinner("Downloading video..."):
         try:

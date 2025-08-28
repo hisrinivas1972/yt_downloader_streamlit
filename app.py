@@ -1,9 +1,10 @@
 import os
-import streamlit as st
 
-# Fix permissions for static-ffmpeg cache/lock files on Streamlit Cloud
+# Fix permissions for static-ffmpeg lock/cache files on Streamlit Cloud
 os.environ["XDG_CACHE_HOME"] = "/tmp"
+os.environ["STATIC_FFMPEG_LOCK_FILE"] = "/tmp/static_ffmpeg.lock"
 
+import streamlit as st
 import yt_dlp
 import subprocess
 from static_ffmpeg import run as sffmpeg_run

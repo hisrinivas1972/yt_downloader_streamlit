@@ -12,11 +12,13 @@ A Streamlit web app to download YouTube Shorts videos, extract audio, crop the v
 ## 🚀 Clone & Run Locally
 
 ```bash
+
 # Clone the repository
 git clone https://github.com/hisrinivas1972/yt_downloader_streamlit.git
 
 # Navigate into the project folder
 cd yt_downloader_streamlit
+
 ---
 
 ## Features

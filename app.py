@@ -2,36 +2,21 @@ import streamlit as st
 import yt_dlp
 import os
 import subprocess
-import requests
-import stat
+from static_ffmpeg import run as sffmpeg_run
 
-# ---------- Download FFmpeg (once per session) ----------
-def download_ffmpeg():
-    ffmpeg_url = "https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.zip"
-    ffmpeg_zip = "ffmpeg.zip"
+def get_ffmpeg_path():
+    # Automatically ensures FFmpeg is downloaded and returns path
+    ffmpeg, ffprobe = sffmpeg_run.get_or_fetch_platform_executables_else_raise()
+    return ffmpeg
 
-    if not os.path.exists("ffmpeg"):
-        st.info("Downloading FFmpeg...")
-        with open(ffmpeg_zip, "wb") as f:
-            f.write(requests.get(ffmpeg_url).content)
-        subprocess.run(["unzip", ffmpeg_zip, "-d", "./"])
-        # Find the binary
-        for root, dirs, files in os.walk("./"):
-            for file in files:
-                if file == "ffmpeg":
-                    ffmpeg_path = os.path.join(root, file)
-                    os.chmod(ffmpeg_path, os.stat(ffmpeg_path).st_mode | stat.S_IEXEC)
-                    return ffmpeg_path
-    return "./ffmpeg"  # Fallback
+st.set_page_config(page_title="YouTube Shorts Downloader", layout="centered")
+st.title("▶ YouTube Shorts Downloader (Streamlit Cloud Compatible)")
 
-ffmpeg_path = download_ffmpeg()
+youtube_url = st.text_input("Enter YouTube Shorts URL:")
 
-# ---------- Set yt-dlp config with custom ffmpeg path ----------
-st.title("🎞️ YouTube Shorts Downloader + Audio/Video Splitter")
+if st.button("Download & Process") and youtube_url:
+    ffmpeg_path = get_ffmpeg_path()
 
-youtube_url = st.text_input("Paste a YouTube Shorts URL:")
-
-if st.button("Download and Process") and youtube_url:
     with st.spinner("Downloading video..."):
         ydl_opts = {
             'format': 'bestvideo+bestaudio/best',
@@ -39,30 +24,26 @@ if st.button("Download and Process") and youtube_url:
             'outtmpl': 'downloaded.%(ext)s',
             'ffmpeg_location': ffmpeg_path,
         }
-
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(youtube_url, download=True)
             video_filename = ydl.prepare_filename(info)
 
-    base_name = os.path.splitext(video_filename)[0]
+    base = os.path.splitext(video_filename)[0]
 
     # Extract audio
-    audio_file = f"{base_name}_audio.mp3"
-    subprocess.run([
-        ffmpeg_path, "-i", video_filename, "-q:a", "0", "-map", "a", audio_file, "-y"
-    ])
+    audio = f"{base}_audio.mp3"
+    subprocess.run([ffmpeg_path, "-i", video_filename, "-q:a", "0", "-map", "a", audio, "-y"])
 
-    # Crop video and remove audio
-    video_no_audio = f"{base_name}_video_no_audio_no_text.mp4"
+    # Crop and mute video
+    cropped = f"{base}_cropped.mp4"
     subprocess.run([
         ffmpeg_path, "-i", video_filename, "-an", "-filter:v",
         "crop=in_w:in_h-200:0:0", "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-        video_no_audio, "-y"
+        cropped, "-y"
     ])
 
-    st.success("Done! Download your files below:")
-    st.video(video_no_audio)
-    st.audio(audio_file)
-
-    st.download_button("Download Audio (MP3)", open(audio_file, "rb"), file_name=os.path.basename(audio_file))
-    st.download_button("Download Cropped Video (MP4)", open(video_no_audio, "rb"), file_name=os.path.basename(video_no_audio))
+    st.success("Processing complete!")
+    st.video(cropped)
+    st.download_button("Download Cropped Video", open(cropped, "rb"), file_name=cropped)
+    st.audio(audio)
+    st.download_button("Download Audio", open(audio, "rb"), file_name=audio)

@@ -1,9 +1,10 @@
 # YouTube Shorts Downloader (Streamlit Cloud Compatible)
 
 [![Python](https://img.shields.io/badge/python-3.7%2B-blue.svg)](https://www.python.org/)
-[![Streamlit](https://img.shields.io/badge/streamlit-%3E%3D0.85.0-orange.svg)](https://streamlit.io/)
+[![Streamlit](https://img.shields.io/badge/built%20with-Streamlit-orange)](https://streamlit.io/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Deploy on Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://ytdownloaderapp-cetcap87fwtakddr2w2jg9.streamlit.app/)
+[![Live App](https://img.shields.io/badge/launch-app-success)](https://ytdownloaderapp-cetcap87fwtakddr2w2jg9.streamlit.app/)
+[![GitHub Repo](https://img.shields.io/badge/view%20on-GitHub-blue)](https://github.com/hisrinivas1972/yt_downloader_streamlit)
 
 A Streamlit web app to download YouTube Shorts videos, extract audio, crop the video, and download subtitles — all compatible with Streamlit Cloud.
 

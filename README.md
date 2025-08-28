@@ -9,7 +9,6 @@
 A Streamlit web app to download YouTube Shorts videos, extract audio, crop the video, and download subtitles — all compatible with Streamlit Cloud.
 
 ---
-
 ## 🚀 Clone & Run Locally
 
 ```bash

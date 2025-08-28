@@ -1,17 +1,21 @@
 import os
-
-# Fix permissions for static-ffmpeg lock/cache files on Streamlit Cloud
-os.environ["XDG_CACHE_HOME"] = "/tmp"
-os.environ["STATIC_FFMPEG_LOCK_FILE"] = "/tmp/static_ffmpeg.lock"
-
 import streamlit as st
-import yt_dlp
 import subprocess
-from static_ffmpeg import run as sffmpeg_run
+import yt_dlp
+from filelock import FileLock
+
+# Set writable temp directory for cache and locks
+os.environ["XDG_CACHE_HOME"] = "/tmp"
+
+LOCK_FILE = "/tmp/static_ffmpeg.lock"
+
+# Lock the fetching of ffmpeg binaries manually
+with FileLock(LOCK_FILE):
+    from static_ffmpeg import run as sffmpeg_run
+    ffmpeg_path, ffprobe_path = sffmpeg_run.get_or_fetch_platform_executables_else_raise()
 
 def get_ffmpeg_path():
-    ffmpeg, ffprobe = sffmpeg_run.get_or_fetch_platform_executables_else_raise()
-    return ffmpeg
+    return ffmpeg_path
 
 st.set_page_config(page_title="YouTube Shorts Downloader", layout="centered")
 st.title("▶ YouTube Shorts Downloader (Streamlit Cloud Compatible)")
@@ -38,14 +42,12 @@ if st.button("Download & Process") and youtube_url:
 
     base = os.path.splitext(video_filename)[0]
 
-    # Extract audio only
     audio_file = f"{base}_audio.mp3"
     with st.spinner("Extracting audio..."):
         subprocess.run([
             ffmpeg_path, "-i", video_filename, "-q:a", "0", "-map", "a", audio_file, "-y"
         ])
 
-    # Crop video (remove audio, crop bottom 200px)
     cropped_video = f"{base}_cropped.mp4"
     with st.spinner("Cropping video and removing audio..."):
         subprocess.run([

@@ -1,33 +1,56 @@
 import os
-
-# MUST be set before importing static_ffmpeg!
-os.environ["STATIC_FFMPEG_CACHE_DIR"] = "/tmp/static_ffmpeg_cache"
-os.environ["STATIC_FFMPEG_LOCK_FILE"] = "/tmp/static_ffmpeg.lock"
-os.environ["XDG_CACHE_HOME"] = "/tmp"
-
+import stat
+import subprocess
 import streamlit as st
 import yt_dlp
-import subprocess
-from static_ffmpeg import run as sffmpeg_run
 
-def get_ffmpeg_path():
-    ffmpeg, ffprobe = sffmpeg_run.get_or_fetch_platform_executables_else_raise()
-    return ffmpeg
+FFMPEG_PATH = "/tmp/ffmpeg"
+
+def download_ffmpeg():
+    if os.path.isfile(FFMPEG_PATH):
+        return
+    url = "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
+    tar_path = "/tmp/ffmpeg.tar.xz"
+    # Download ffmpeg archive
+    st.info("Downloading ffmpeg binary (~30MB)...")
+    subprocess.run(["curl", "-L", url, "-o", tar_path], check=True)
+    # Extract ffmpeg binary
+    subprocess.run(["tar", "-xf", tar_path, "-C", "/tmp"], check=True)
+    # Find and move ffmpeg binary to /tmp/ffmpeg
+    extracted_dir = None
+    for entry in os.listdir("/tmp"):
+        if entry.startswith("ffmpeg") and os.path.isdir(os.path.join("/tmp", entry)):
+            extracted_dir = os.path.join("/tmp", entry)
+            break
+    if extracted_dir is None:
+        st.error("Failed to find extracted ffmpeg directory.")
+        st.stop()
+    src_ffmpeg = os.path.join(extracted_dir, "ffmpeg")
+    if not os.path.isfile(src_ffmpeg):
+        st.error("ffmpeg binary not found inside extracted archive.")
+        st.stop()
+    os.rename(src_ffmpeg, FFMPEG_PATH)
+    os.chmod(FFMPEG_PATH, stat.S_IRWXU)  # Make executable
+    st.success("ffmpeg downloaded and ready.")
+
+def get_ffmpeg_dir():
+    return os.path.dirname(FFMPEG_PATH)
 
 st.title("▶ YouTube Shorts Downloader (Streamlit Cloud Compatible)")
+
+download_ffmpeg()
 
 youtube_url = st.text_input("Enter YouTube Shorts URL:")
 
 if st.button("Download & Process") and youtube_url:
-    ffmpeg_path = get_ffmpeg_path()
+    ydl_opts = {
+        'format': 'bestvideo+bestaudio/best',
+        'merge_output_format': 'mp4',
+        'outtmpl': 'downloaded.%(ext)s',
+        'ffmpeg_location': get_ffmpeg_dir(),
+    }
 
     with st.spinner("Downloading video..."):
-        ydl_opts = {
-            'format': 'bestvideo+bestaudio/best',
-            'merge_output_format': 'mp4',
-            'outtmpl': 'downloaded.%(ext)s',
-            'ffmpeg_location': ffmpeg_path,
-        }
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(youtube_url, download=True)
@@ -41,23 +64,25 @@ if st.button("Download & Process") and youtube_url:
     audio_file = f"{base}_audio.mp3"
     with st.spinner("Extracting audio..."):
         subprocess.run([
-            ffmpeg_path, "-i", video_filename, "-q:a", "0", "-map", "a", audio_file, "-y"
-        ])
+            FFMPEG_PATH, "-i", video_filename, "-q:a", "0", "-map", "a", audio_file, "-y"
+        ], check=True)
 
     cropped_video = f"{base}_cropped.mp4"
     with st.spinner("Cropping video and removing audio..."):
         subprocess.run([
-            ffmpeg_path, "-i", video_filename, "-an", "-filter:v",
+            FFMPEG_PATH, "-i", video_filename, "-an", "-filter:v",
             "crop=in_w:in_h-200:0:0", "-c:v", "libx264", "-preset", "fast", "-crf", "23",
             cropped_video, "-y"
-        ])
+        ], check=True)
 
     st.success("Processing complete!")
 
     st.subheader("▶ Cropped Video")
     st.video(cropped_video)
-    st.download_button("⬇️ Download Cropped Video", open(cropped_video, "rb"), file_name=os.path.basename(cropped_video))
+    with open(cropped_video, "rb") as f:
+        st.download_button("⬇️ Download Cropped Video", f, file_name=os.path.basename(cropped_video))
 
     st.subheader("🎵 Extracted Audio")
     st.audio(audio_file)
-    st.download_button("⬇️ Download Audio", open(audio_file, "rb"), file_name=os.path.basename(audio_file))
+    with open(audio_file, "rb") as f:
+        st.download_button("⬇️ Download Audio", f, file_name=os.path.basename(audio_file))

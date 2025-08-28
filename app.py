@@ -124,20 +124,25 @@ if st.button("Download & Process") and youtube_url:
 
     st.success("Processing complete!")
 
-    # Show cropped video and provide download
-    st.subheader("▶ Cropped Video")
+    # --- Display original video ---
+    st.subheader("🎞️ Original Video (from YouTube)")
+    st.video(video_filename)
+    with open(video_filename, "rb") as f:
+        st.download_button("⬇️ Download Original Video", f, file_name=os.path.basename(video_filename))
+
+    # --- Display cropped video ---
+    st.subheader("▶ Cropped Video (no audio)")
     st.video(cropped_video)
     with open(cropped_video, "rb") as f:
         st.download_button("⬇️ Download Cropped Video", f, file_name=os.path.basename(cropped_video))
 
-    # Show extracted audio and provide download
+    # --- Display extracted audio ---
     st.subheader("🎵 Extracted Audio")
     st.audio(audio_file)
     with open(audio_file, "rb") as f:
         st.download_button("⬇️ Download Audio", f, file_name=os.path.basename(audio_file))
 
-    # Provide subtitle download if subtitle file exists
-    # We don't know exact filename because of %(title)s in outtmpl, so scan /tmp for matching subtitles
+    # --- Provide subtitle download if subtitles exist ---
     subtitle_files = [f for f in os.listdir("/tmp") if f.startswith(info.get('title', '')) and f.endswith(('.vtt', '.srt', '.ass'))]
     if subtitle_files:
         st.subheader("💬 Subtitles")
@@ -147,4 +152,3 @@ if st.button("Download & Process") and youtube_url:
                 st.download_button(f"⬇️ Download Subtitle: {sub_file}", f, file_name=sub_file)
     else:
         st.info("No subtitles were found or downloaded.")
-

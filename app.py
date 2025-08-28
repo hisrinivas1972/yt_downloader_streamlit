@@ -11,7 +11,7 @@ def download_ffmpeg():
         return
     url = "https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz"
     tar_path = "/tmp/ffmpeg.tar.xz"
-    st.info("Downloading ffmpeg binary (~30MB)...")
+    st.sidebar.info("Downloading ffmpeg binary (~30MB)...")
     subprocess.run(["curl", "-L", url, "-o", tar_path], check=True)
     subprocess.run(["tar", "-xf", tar_path, "-C", "/tmp"], check=True)
     os.remove(tar_path)  # Cleanup tar file
@@ -22,17 +22,17 @@ def download_ffmpeg():
         None
     )
     if extracted_dir is None:
-        st.error("Failed to find extracted ffmpeg directory.")
+        st.sidebar.error("Failed to find extracted ffmpeg directory.")
         st.stop()
 
     src_ffmpeg = os.path.join(extracted_dir, "ffmpeg")
     if not os.path.isfile(src_ffmpeg):
-        st.error("ffmpeg binary not found inside extracted archive.")
+        st.sidebar.error("ffmpeg binary not found inside extracted archive.")
         st.stop()
 
     os.rename(src_ffmpeg, FFMPEG_PATH)
     os.chmod(FFMPEG_PATH, stat.S_IRWXU)  # Make executable
-    st.success("ffmpeg downloaded and ready.")
+    st.sidebar.success("ffmpeg downloaded and ready.")
 
 def get_ffmpeg_dir():
     return os.path.dirname(FFMPEG_PATH)
@@ -41,17 +41,19 @@ st.title("▶ YouTube Shorts Downloader (Streamlit Cloud Compatible)")
 
 download_ffmpeg()
 
-uploaded_cookies = st.file_uploader("Upload your YouTube cookies.txt (optional)", type=["txt"])
+# Sidebar Inputs
+st.sidebar.header("Input Options")
+uploaded_cookies = st.sidebar.file_uploader("Upload your YouTube cookies.txt (optional)", type=["txt"])
+youtube_url = st.sidebar.text_input("Enter YouTube Shorts URL:")
+download_btn = st.sidebar.button("Download & Process")
 
-youtube_url = st.text_input("Enter YouTube Shorts URL:")
-
-if st.button("Download & Process") and youtube_url:
+if download_btn and youtube_url:
     cookie_path = None
     if uploaded_cookies is not None:
         cookie_path = "/tmp/cookies.txt"
         with open(cookie_path, "wb") as f:
             f.write(uploaded_cookies.getbuffer())
-        st.success("Cookies uploaded!")
+        st.sidebar.success("Cookies uploaded!")
 
     # --- Download subtitles only ---
     subtitle_opts = {

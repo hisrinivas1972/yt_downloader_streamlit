@@ -1,21 +1,19 @@
 import os
 import streamlit as st
-import subprocess
-import yt_dlp
-from filelock import FileLock
 
-# Set writable temp directory for cache and locks
+# Set writable cache dir for static-ffmpeg
 os.environ["XDG_CACHE_HOME"] = "/tmp"
 
-LOCK_FILE = "/tmp/static_ffmpeg.lock"
+import yt_dlp
+import subprocess
 
-# Lock the fetching of ffmpeg binaries manually
-with FileLock(LOCK_FILE):
-    from static_ffmpeg import run as sffmpeg_run
-    ffmpeg_path, ffprobe_path = sffmpeg_run.get_or_fetch_platform_executables_else_raise()
+# Monkeypatch static_ffmpeg's internal lock file location before import
+import static_ffmpeg.run as sffmpeg_run
+sffmpeg_run._LOCK_FILE = "/tmp/static_ffmpeg.lock"
 
 def get_ffmpeg_path():
-    return ffmpeg_path
+    ffmpeg, ffprobe = sffmpeg_run.get_or_fetch_platform_executables_else_raise()
+    return ffmpeg
 
 st.set_page_config(page_title="YouTube Shorts Downloader", layout="centered")
 st.title("▶ YouTube Shorts Downloader (Streamlit Cloud Compatible)")

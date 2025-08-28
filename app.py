@@ -1,21 +1,19 @@
 import os
-import streamlit as st
 
-# Set writable cache dir for static-ffmpeg
+# MUST be set before importing static_ffmpeg!
+os.environ["STATIC_FFMPEG_CACHE_DIR"] = "/tmp/static_ffmpeg_cache"
+os.environ["STATIC_FFMPEG_LOCK_FILE"] = "/tmp/static_ffmpeg.lock"
 os.environ["XDG_CACHE_HOME"] = "/tmp"
 
+import streamlit as st
 import yt_dlp
 import subprocess
-
-# Monkeypatch static_ffmpeg's internal lock file location before import
-import static_ffmpeg.run as sffmpeg_run
-sffmpeg_run._LOCK_FILE = "/tmp/static_ffmpeg.lock"
+from static_ffmpeg import run as sffmpeg_run
 
 def get_ffmpeg_path():
     ffmpeg, ffprobe = sffmpeg_run.get_or_fetch_platform_executables_else_raise()
     return ffmpeg
 
-st.set_page_config(page_title="YouTube Shorts Downloader", layout="centered")
 st.title("▶ YouTube Shorts Downloader (Streamlit Cloud Compatible)")
 
 youtube_url = st.text_input("Enter YouTube Shorts URL:")
